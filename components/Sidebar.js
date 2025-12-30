@@ -10,24 +10,24 @@ const Sidebar = () => {
       try {
         const res = await fetch('https://the-short-film-channel-assets-public.s3.eu-north-1.amazonaws.com/epg/main.json');
         const data = await res.json();
-        
         const now = new Date();
         
-        // 1. Filter out shows that ended in the past
-        const futureAndCurrent = data.programs.filter(pgm => new Date(pgm.end) > now);
-        setPrograms(futureAndCurrent.slice(0, 5));
-
-        // 2. Find the exact show playing RIGHT NOW
-        const active = data.programs.find(pgm => 
-          new Date(pgm.start) <= now && new Date(pgm.end) >= now
+        // Filter out past shows
+        const upcoming = data.programs.filter(pgm => new Date(pgm.end) > now);
+        
+        // Find the "True" current or next real film (skipping Untitled/Promo blocks)
+        const currentOrNextFilm = upcoming.find(pgm => 
+          pgm.title && 
+          pgm.title.toLowerCase() !== 'untitled' && 
+          !pgm.title.toLowerCase().includes('5 minute ad')
         );
 
-        if (active) {
-          setCurrentShow(active);
-          fetchSynopsis(active.title);
-        } else {
-          setSynopsis("Short Film Showcase: Independent Cinema.");
+        if (currentOrNextFilm) {
+          setCurrentShow(currentOrNextFilm);
+          fetchSynopsis(currentOrNextFilm.title);
         }
+
+        setPrograms(upcoming.filter(p => p.title && p.title.toLowerCase() !== 'untitled').slice(0, 5));
       } catch (e) {
         console.error("EPG Fetch Error", e);
       }
@@ -44,23 +44,27 @@ const Sidebar = () => {
     };
 
     fetchEPG();
-    const interval = setInterval(fetchEPG, 30000); // Refresh every 30s
+    const interval = setInterval(fetchEPG, 30000);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div style={{ flex: 1, minWidth: '300px', background: '#111', padding: '20px', borderRadius: '12px', border: '1px solid #222' }}>
-      <h3 style={{ color: '#D4AF37', marginTop: 0, fontSize: '0.9rem', textTransform: 'uppercase' }}>Now Playing</h3>
-      <h2 style={{ fontSize: '1.5rem', margin: '10px 0' }}>{currentShow?.title || "TSFS Broadcast"}</h2>
-      <p style={{ color: '#aaa', lineHeight: '1.6', fontSize: '0.9rem' }}>{synopsis}</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+        <div style={{ width: '8px', height: '8px', background: '#ff4b4b', borderRadius: '50%' }}></div>
+        <h3 style={{ color: '#D4AF37', margin: 0, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Featured Next</h3>
+      </div>
       
-      <hr style={{ border: '0', borderTop: '1px solid #222', margin: '20px 0' }} />
+      <h2 style={{ fontSize: '1.4rem', margin: '0 0 10px 0', color: '#fff' }}>{currentShow?.title || "TSFS Showcase"}</h2>
+      <p style={{ color: '#aaa', lineHeight: '1.5', fontSize: '0.85rem', minHeight: '60px' }}>{synopsis}</p>
       
-      <h3 style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase' }}>Coming Up Next</h3>
-      {programs.slice(1).map((pgm, i) => (
-        <div key={i} style={{ marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #1a1a1a' }}>
-          <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{pgm.title}</div>
-          <div style={{ fontSize: '0.75rem', color: '#555' }}>
+      <div style={{ margin: '20px 0', borderTop: '1px solid #222' }}></div>
+      
+      <h3 style={{ color: '#555', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '15px' }}>Coming Up</h3>
+      {programs.slice(1, 5).map((pgm, i) => (
+        <div key={i} style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #1a1a1a' }}>
+          <div style={{ fontWeight: '600', fontSize: '0.85rem', color: '#eee' }}>{pgm.title}</div>
+          <div style={{ fontSize: '0.7rem', color: '#D4AF37', marginTop: '2px' }}>
             {new Date(pgm.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
