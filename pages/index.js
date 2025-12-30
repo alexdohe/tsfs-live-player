@@ -4,7 +4,8 @@ import Sidebar from '../components/Sidebar';
 
 export default function TSFSMain() {
   const STREAM = "https://channel.stage.theshortfilmshow.com/channel/main/playlist.m3u8";
-  const FALLBACK = "https://the-short-film-channel-assets-public.s3.eu-north-1.amazonaws.com/Fall+back+video/Ambience+-2.mp4";
+  // Encoded URL (Spaces replaced with %20)
+  const FALLBACK = "https://the-short-film-channel-assets-public.s3.eu-north-1.amazonaws.com/Fall%20back%20video/Ambience%20-2.mp4";
   const SITE_URL = "https://channel.theshortfilmshow.com";
 
   return (
@@ -26,7 +27,7 @@ export default function TSFSMain() {
           <VideoPlayer streamUrl={STREAM} fallbackUrl={FALLBACK} />
           <div style={{ marginTop: '20px', display: 'flex', gap: '15px' }}>
              <button onClick={() => window.open(`https://twitter.com/intent/tweet?url=${SITE_URL}`, '_blank')} style={{ background: '#1DA1F2', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '6px', cursor: 'pointer' }}>Share on X</button>
-             <a href="https://theshortfilmshow.com" style={{ color: '#D4AF37', textDecoration: 'none', marginLeft: 'auto' }}>Visit Main Website →</a>
+             <a href="https://theshortfilmshow.com" style={{ color: '#D4AF37', textDecoration: 'none', marginLeft: 'auto', borderBottom: '1px solid #D4AF37' }}>Visit Main Website →</a>
           </div>
         </div>
         <Sidebar />
