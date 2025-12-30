@@ -12,17 +12,18 @@ export default function Sidebar() {
       try {
         const res = await fetch(`${EPG_URL}?t=${Date.now()}`);
         if (!res.ok) throw new Error(`S3 Error: ${res.status}`);
-        const data = await response.json();
+        
+        const data = await res.json(); // Fixed: changed 'response' to 'res'
         const allPrograms = data.programs || [];
         setPrograms(allPrograms);
 
-        // Find the program based on actual current time
         const now = new Date();
+        // Finds program where 'now' is between start and end
         const current = allPrograms.find(p => {
           const start = new Date(p.start);
           const end = new Date(p.end);
           return now >= start && now < end;
-        }) || allPrograms[0]; // Fallback to first if no match
+        }) || allPrograms.find(p => new Date(p.start) > now) || allPrograms[0];
 
         setNowPlaying(current);
         setStatus("Connected");
@@ -37,6 +38,7 @@ export default function Sidebar() {
   }, []);
 
   const formatTime = (isoString) => {
+    if(!isoString) return "--:--";
     return new Date(isoString).toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit',
@@ -59,7 +61,7 @@ export default function Sidebar() {
       </div>
 
       <div style={{ marginTop: '30px' }}>
-        <h3 style={{ fontSize: '0.75rem', color: '#777', textTransform: 'uppercase' }}>Up Next</h3>
+        <h3 style={{ fontSize: '0.75rem', color: '#777', textTransform: 'uppercase', marginBottom: '10px' }}>Coming Up Next</h3>
         {programs
           .filter(p => new Date(p.start) > new Date())
           .slice(0, 4)
