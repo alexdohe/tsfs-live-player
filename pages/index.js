@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 export default function LivePlayer() {
-  const [metadata, setMetadata] = useState({ title: 'The Short Film Show', synopsis: 'Connecting to database...' });
+  const [metadata, setMetadata] = useState({ title: 'The Short Film Show', synopsis: 'Connecting to live broadcast...' });
   const [schedule, setSchedule] = useState([]);
 
   useEffect(() => {
@@ -23,8 +23,8 @@ export default function LivePlayer() {
         setMetadata(data);
         await player.load(data.streamUrl);
 
-        // This fetch requires the S3 CORS fix to be saved first
-        const epgRes = await fetch('https://the-short-film-channel-assets-public.s3.amazonaws.com/public%20files/main.json');
+        // Pointing to the specific /epg/ path you provided
+        const epgRes = await fetch('https://the-short-film-channel-assets-public.s3.eu-north-1.amazonaws.com/epg/main.json');
         const epgData = await epgRes.json();
         setSchedule(epgData.playlist || []);
       } catch (e) { console.error("Data Fetch Error", e); }
@@ -47,7 +47,7 @@ export default function LivePlayer() {
         <div style={{display: 'flex', gap: '50px', flexDirection: 'row'}}>
           <div style={{flex: 3}}>
             <div id="video-parent" style={{position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '16px', overflow: 'hidden', border: '2px solid rgba(247, 174, 18, 0.4)'}}>
-              <video id="video" style={{width: '100%', height: '100%'}} autoPlay muted playsInline loop />
+              <video id="video" style={{width: '100%', height: '100%'}} autoPlay muted playsInline loop={true} />
             </div>
             <div style={{marginTop: '30px', padding: '40px', background: '#111', borderRadius: '16px', borderTop: '8px solid #F7AE12'}}>
               <h1 style={{fontSize: '2.8rem', margin: '0 0 15px 0'}}>{metadata.title}</h1>
@@ -61,7 +61,7 @@ export default function LivePlayer() {
                 <div style={{fontSize: '1.2rem', fontWeight: 'bold'}}>{item.title}</div>
                 <div style={{fontSize: '0.9rem', color: '#F7AE12', marginTop: '5px'}}>{item.air_time || 'Next'}</div>
               </div>
-            )) : <p style={{color: '#444'}}>Connecting to schedule...</p>}
+            )) : <p style={{color: '#444'}}>Loading schedule...</p>}
           </div>
         </div>
       </div>
