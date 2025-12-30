@@ -4,64 +4,52 @@ import 'shaka-player/dist/controls.css';
 const ShakaEngine = ({ streamUrl, fallbackUrl }) => {
   const videoRef = useRef(null);
   const videoContainerRef = useRef(null);
-  const [hasError, setHasError] = useState(false);
+  const [activeUrl, setActiveUrl] = useState(streamUrl);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const shaka = require('shaka-player/dist/shaka-player.ui.js');
     
-    // Check if browser supports Shaka
-    if (!shaka.Player.isBrowserSupported()) {
-      console.error('Browser not supported!');
-      return;
-    }
-
     let player = new shaka.Player(videoRef.current);
     let ui = new shaka.ui.Overlay(player, videoContainerRef.current, videoRef.current);
 
     ui.configure({
-      'controlPanelElements': ['play_pause', 'time_and_duration', 'spacer', 'mute', 'volume', 'fullscreen', 'overflow_menu'],
+      'controlPanelElements': ['play_pause', 'spacer', 'mute', 'volume', 'fullscreen']
     });
 
-    const loadVideo = async () => {
+    const init = async () => {
       try {
-        const url = hasError ? fallbackUrl : streamUrl;
-        console.log("Shaka loading:", url);
-        
-        // Use a more robust load sequence
-        await player.load(url);
-        console.log("Content loaded successfully!");
-      } catch (error) {
-        if (!hasError) {
-          console.error("Primary stream failed, attempting fallback...", error.code);
-          setHasError(true);
-        } else {
-          console.error("Fallback also failed.", error.code);
+        console.log("Shaka attempting to load:", activeUrl);
+        await player.load(activeUrl);
+      } catch (e) {
+        console.error("Shaka Load Error:", e.code);
+        // If primary stream fails, switch to fallback immediately
+        if (activeUrl !== fallbackUrl) {
+          console.log("Switching to Fallback Video...");
+          setActiveUrl(fallbackUrl);
         }
       }
     };
 
-    loadVideo();
+    init();
+
+    // Safety Timeout: If nothing happens in 4 seconds, force fallback
+    const timer = setTimeout(() => {
+      if (videoRef.current && videoRef.current.readyState === 0 && activeUrl !== fallbackUrl) {
+        setActiveUrl(fallbackUrl);
+      }
+    }, 4000);
 
     return () => {
+      clearTimeout(timer);
       if (player) player.destroy();
       if (ui) ui.destroy();
     };
-  }, [hasError, streamUrl, fallbackUrl]);
+  }, [activeUrl, fallbackUrl, streamUrl]);
 
   return (
-    <div ref={videoContainerRef} style={{ position: 'relative', width: '100%', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#000' }}>
-      <video 
-        ref={videoRef} 
-        style={{ width: '100%', height: '100%', display: 'block' }} 
-        autoPlay 
-        muted 
-        playsinline 
-      />
-      <style jsx global>{`
-        .shaka-release-dot { display: none; }
-        .shaka-overflow-menu { background-color: #0c0c0c !important; color: white !important; }
-        .shaka-bottom-controls { padding: 0 10px 5px 10px; }
-      `}</style>
+    <div ref={videoContainerRef} style={{ width: '100%', position: 'relative', background: '#000', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden' }}>
+      <video ref={videoRef} style={{ width: '100%', height: '100%' }} autoPlay muted playsInline />
     </div>
   );
 };
