@@ -14,7 +14,8 @@ export default async function handler(req, res) {
             streamUrl: process.env.LIVE_STITCHER_URL,
             title: film.project.title,
             synopsis: film.project.synopsis,
-            filmId: film.filmId
+            filmId: film.filmId,
+            filmPageUrl: "https://theshortfilmshow.com/film/" + film.filmId
         });
     } catch (e) {
         res.status(200).json({
