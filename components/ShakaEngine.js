@@ -18,32 +18,35 @@ const ShakaEngine = ({ streamUrl, fallbackUrl }) => {
       'controlPanelElements': ['play_pause', 'spacer', 'mute', 'volume', 'fullscreen']
     });
 
-    const loadContent = async () => {
-      try {
-        console.log("Shaka attempting to load:", activeUrl);
-        await player.load(activeUrl);
-      } catch (e) {
-        console.error("Shaka Load Error:", e.code);
-        if (!isFallback) {
-          triggerFallback();
-        }
+    const triggerFallback = () => {
+      if (!isFallback) {
+        console.log("🚨 Stream hung. Force-switching to S3 Fallback.");
+        setIsFallback(true);
+        setActiveUrl(fallbackUrl);
       }
     };
 
-    const triggerFallback = () => {
-      console.log("🚨 Hard Switching to Fallback Video...");
-      setIsFallback(true);
-      setActiveUrl(fallbackUrl);
+    const loadContent = async () => {
+      try {
+        // Set a short timeout for the manifest request itself
+        player.configure('manifest.retryParameters.timeout', 5000);
+        player.configure('manifest.retryParameters.maxAttempts', 1);
+        
+        await player.load(activeUrl);
+      } catch (e) {
+        console.error("Shaka Error:", e.code);
+        triggerFallback();
+      }
     };
 
     loadContent();
 
-    // 5-Second Watchdog: If video hasn't started, force the fallback
+    // The "Watchdog": If the video isn't actually playing in 6 seconds, kill it.
     const watchdog = setTimeout(() => {
-      if (videoRef.current && videoRef.current.readyState < 3 && !isFallback) {
+      if (videoRef.current && videoRef.current.paused && !isFallback) {
         triggerFallback();
       }
-    }, 5000);
+    }, 6000);
 
     return () => {
       clearTimeout(watchdog);
