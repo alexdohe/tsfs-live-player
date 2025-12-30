@@ -1,59 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
-import 'shaka-player/dist/controls.css';
-const shaka = require('shaka-player/dist/shaka-player.ui.js');
+import React from 'react';
+import dynamic from 'next/dynamic';
+
+// This is the magic line that prevents the "document is not defined" error
+const ShakaEngine = dynamic(() => import('./ShakaEngine'), { 
+  ssr: false,
+  loading: () => <div style={{ paddingTop: '56.25%', background: '#000', borderRadius: '12px' }} />
+});
 
 const VideoPlayer = ({ streamUrl, fallbackUrl }) => {
-  const videoRef = useRef(null);
-  const videoContainerRef = useRef(null);
-  const [player, setPlayer] = useState(null);
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    let localPlayer = new shaka.Player(videoRef.current);
-    const ui = new shaka.ui.Overlay(localPlayer, videoContainerRef.current, videoRef.current);
-    
-    // Configure Shaka for Fullscreen and typical player settings
-    const config = {
-      'controlPanelElements': ['play_pause', 'time_and_duration', 'spacer', 'mute', 'volume', 'fullscreen', 'overflow_menu'],
-    };
-    ui.configure(config);
-
-    const loadContent = async () => {
-      try {
-        await localPlayer.load(hasError ? fallbackUrl : streamUrl);
-      } catch (e) {
-        if (!hasError) {
-          console.error("Stream failed, switching to Shaka Fallback", e);
-          setHasError(true);
-        }
-      }
-    };
-
-    loadContent();
-    setPlayer(localPlayer);
-
-    return () => {
-      if (localPlayer) {
-        localPlayer.destroy();
-        ui.destroy();
-      }
-    };
-  }, [hasError, streamUrl, fallbackUrl]);
-
-  return (
-    <div 
-      ref={videoContainerRef} 
-      style={{ position: 'relative', width: '100%', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#000' }}
-    >
-      <video
-        ref={videoRef}
-        style={{ width: '100%', height: '100%', borderRadius: '12px' }}
-        autoPlay
-        muted
-        playsInline
-      />
-    </div>
-  );
+  return <ShakaEngine streamUrl={streamUrl} fallbackUrl={fallbackUrl} />;
 };
 
 export default VideoPlayer;
