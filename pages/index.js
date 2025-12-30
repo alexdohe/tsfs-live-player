@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 export default function LivePlayer() {
-  const [metadata, setMetadata] = useState({ title: 'The Short Film Show', synopsis: 'Loading broadcast...' });
+  const [metadata, setMetadata] = useState({ title: 'The Short Film Show', synopsis: 'Connecting...' });
   const [schedule, setSchedule] = useState([]);
 
   useEffect(() => {
@@ -17,10 +17,10 @@ export default function LivePlayer() {
         const data = await res.json();
         setMetadata(data);
         
-        // Load stream (Live or Fallback)
+        // This will load the Live Stream if available, or the Fallback if not
         await player.load(data.streamUrl);
 
-        // Fetch EPG (using %20 for the space in 'public files')
+        // Fetch EPG (Note the %20 for the space in 'public files')
         const epgRes = await fetch('https://the-short-film-channel-assets-public.s3.amazonaws.com/public%20files/main.json');
         const epgData = await epgRes.json();
         setSchedule(epgData.playlist || []);
@@ -34,13 +34,12 @@ export default function LivePlayer() {
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.11/dist/controls.css" />
       <div style={{maxWidth: '1200px', margin: '0 auto'}}>
         
+        {/* DYNAMIC LOGO OVERLAY - FETCHED FROM S3 */}
         <div style={{marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <a href="https://theshortfilmshow.com" target="_blank" rel="noreferrer">
+            <a href="https://theshortfilmshow.com" target="_blank">
                 <img src="https://the-short-film-channel-assets-public.s3.amazonaws.com/public%20files/the-short-film-CHANNEL.png" alt="TSFS Logo" style={{height: '65px'}} />
             </a>
-            <div style={{textAlign: 'right'}}>
-                <div style={{color: '#D4AF37', fontWeight: 'bold', fontSize: '1.2rem'}}>LIVE CHANNEL</div>
-            </div>
+            <div style={{color: '#D4AF37', fontWeight: 'bold'}}>LIVE CHANNEL</div>
         </div>
 
         <div style={{display: 'flex', gap: '30px', flexDirection: 'row'}}>
@@ -49,8 +48,8 @@ export default function LivePlayer() {
               <video id="video" style={{width: '100%', height: '100%'}} autoPlay muted playsInline loop />
             </div>
             <div style={{marginTop: '25px', padding: '30px', background: '#111', borderRadius: '12px', borderTop: '4px solid #D4AF37'}}>
-              <h1 style={{fontSize: '2rem', margin: '0 0 15px 0'}}>{metadata.title}</h1>
-              <p style={{color: '#bbb', lineHeight: '1.6'}}>{metadata.synopsis}</p>
+              <h1 style={{fontSize: '2rem', margin: '0 0 10px 0'}}>{metadata.title}</h1>
+              <p style={{color: '#bbb'}}>{metadata.synopsis}</p>
             </div>
           </div>
 
