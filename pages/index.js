@@ -19,21 +19,9 @@ export default function TSFSMain() {
     <div style={{ backgroundColor: '#050505', minHeight: '100vh', color: '#fff', fontFamily: 'sans-serif' }}>
       <Head>
         <title>The Short Film Show - Live Channel</title>
-        <meta name="description" content="Watch award-winning short films from around the world, streaming live 24/7." />
-        
-        {/* Open Graph / Facebook */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={SITE_URL} />
         <meta property="og:title" content="The Short Film Show - Live" />
-        <meta property="og:description" content="Streaming the world's best short films 24/7. Join the showcase." />
         <meta property="og:image" content="https://theshortfilmshow.com/Logo.png" />
-
-        {/* Twitter */}
-        <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content={SITE_URL} />
-        <meta property="twitter:title" content="The Short Film Show - Live" />
-        <meta property="twitter:description" content="Streaming the world's best short films 24/7." />
-        <meta property="twitter:image" content="https://theshortfilmshow.com/Logo.png" />
+        <meta name="twitter:card" content="summary_large_image" />
       </Head>
       
       <nav style={{ padding: '15px 5%', borderBottom: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#000' }}>
@@ -48,11 +36,15 @@ export default function TSFSMain() {
 
       <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px 5%', display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
         <div style={{ flex: 2.6, minWidth: '320px' }}>
+          {/* PLAYER WITH CONTROLS ENABLED FOR SUBTITLES/FULLSCREEN */}
           <VideoPlayer streamUrl={STREAM} fallbackUrl={FALLBACK} />
-          <div style={{ marginTop: '20px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#444', textTransform: 'uppercase' }}>Share Stream:</span>
-            <button onClick={shareTwitter} style={{ background: '#1DA1F2', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>Twitter / X</button>
-            <button onClick={shareFacebook} style={{ background: '#4267B2', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>Facebook</button>
+          
+          <div style={{ marginTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center' }}>
+            <button onClick={shareTwitter} style={{ background: '#1DA1F2', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Share on X</button>
+            <button onClick={shareFacebook} style={{ background: '#4267B2', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Facebook</button>
+            <a href="https://theshortfilmshow.com" target="_blank" style={{ color: '#D4AF37', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600, marginLeft: 'auto', borderBottom: '1px solid #D4AF37' }}>
+              Visit Main Website →
+            </a>
           </div>
         </div>
         <Sidebar />
