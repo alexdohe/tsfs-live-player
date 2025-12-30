@@ -4,7 +4,7 @@ import 'shaka-player/dist/controls.css';
 const ShakaEngine = ({ streamUrl, fallbackUrl }) => {
   const videoRef = useRef(null);
   const videoContainerRef = useRef(null);
-  const [activeUrl, setActiveUrl] = useState(streamUrl);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -17,35 +17,34 @@ const ShakaEngine = ({ streamUrl, fallbackUrl }) => {
       'controlPanelElements': ['play_pause', 'spacer', 'mute', 'volume', 'fullscreen']
     });
 
-    const init = async () => {
+    const startPlayer = async () => {
       try {
-        console.log("Shaka attempting to load:", activeUrl);
-        await player.load(activeUrl);
+        const url = useFallback ? fallbackUrl : streamUrl;
+        console.log("🎬 Shaka Loading:", useFallback ? "FALLBACK" : "STREAM");
+        
+        // Critical: Tell Shaka exactly how to handle an MP4 file
+        if (useFallback) {
+          player.configure('manifest.retryParameters.maxAttempts', 0);
+        }
+
+        await player.load(url);
       } catch (e) {
-        console.error("Shaka Load Error:", e.code);
-        // If primary stream fails, switch to fallback immediately
-        if (activeUrl !== fallbackUrl) {
-          console.log("Switching to Fallback Video...");
-          setActiveUrl(fallbackUrl);
+        console.error("❌ Shaka Error Code:", e.code);
+        // If the stream (or fallback) fails, toggle to the other one
+        if (!useFallback) {
+          console.log("⚠️ Stream failed. Hard-switching to Fallback...");
+          setUseFallback(true);
         }
       }
     };
 
-    init();
-
-    // Safety Timeout: If nothing happens in 4 seconds, force fallback
-    const timer = setTimeout(() => {
-      if (videoRef.current && videoRef.current.readyState === 0 && activeUrl !== fallbackUrl) {
-        setActiveUrl(fallbackUrl);
-      }
-    }, 4000);
+    startPlayer();
 
     return () => {
-      clearTimeout(timer);
       if (player) player.destroy();
       if (ui) ui.destroy();
     };
-  }, [activeUrl, fallbackUrl, streamUrl]);
+  }, [useFallback, streamUrl, fallbackUrl]);
 
   return (
     <div ref={videoContainerRef} style={{ width: '100%', position: 'relative', background: '#000', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden' }}>
