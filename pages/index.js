@@ -1,6 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function LivePlayer() {
+  const [metadata, setMetadata] = useState({ title: 'Loading...', synopsis: 'Connecting...' });
+  const [schedule, setSchedule] = useState([]);
+
   useEffect(() => {
     async function init() {
       const shaka = await import('shaka-player/dist/shaka-player.ui.js');
@@ -8,33 +11,62 @@ export default function LivePlayer() {
       const videoParent = document.getElementById('video-parent');
       const player = new shaka.Player(video);
       const ui = new shaka.ui.Overlay(player, videoParent, video);
-
+      
       try {
         const res = await fetch('/api/live-status');
         const data = await res.json();
-        document.getElementById('now-title').innerText = data.title;
-        document.getElementById('now-synopsis').innerText = data.synopsis;
-        document.getElementById('film-link').href = data.filmPageUrl || '#';
+        setMetadata(data);
+        
+        // Using the open manifest link directly
         await player.load(data.streamUrl);
-      } catch (e) { console.error(e); }
+
+        // Fetch EPG from your S3 "public files" folder
+        const epgRes = await fetch('https://the-short-film-channel-assets-public.s3.amazonaws.com/public+files/main.json');
+        const epgData = await epgRes.json();
+        setSchedule(epgData.playlist || []);
+      } catch (e) { console.error("Player Load Error", e); }
     }
     init();
   }, []);
 
   return (
-    <div style={{background: '#050505', color: 'white', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'sans-serif'}}>
+    <div style={{background: '#050505', color: 'white', minHeight: '100vh', fontFamily: 'sans-serif', padding: '20px'}}>
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.11/dist/controls.css" />
-      <div style={{width: '90%', maxWidth: '1000px'}}>
-        <div id="video-parent" style={{position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(212, 175, 55, 0.2)'}}>
-          <video id="video" style={{width: '100%', height: '100%'}} autoPlay muted playsInline />
+      <div style={{maxWidth: '1200px', margin: '0 auto'}}>
+        
+        {/* BRANDED LOGO HEADER */}
+        <div style={{marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+            <a href="https://theshortfilmshow.com" target="_blank" rel="noreferrer">
+                <img src="https://the-short-film-channel-assets-public.s3.amazonaws.com/public+files/the-short-film-CHANNEL.png" alt="TSFS Logo" style={{height: '65px'}} />
+            </a>
+            <div style={{textAlign: 'right'}}>
+                <div style={{color: '#D4AF37', fontWeight: 'bold', fontSize: '1.2rem'}}>LIVE CHANNEL</div>
+                <div style={{fontSize: '0.8rem', color: '#666'}}>Showcasing Independent Cinema</div>
+            </div>
         </div>
-        <div style={{marginTop: '20px', padding: '20px', background: '#111', borderRadius: '12px', borderTop: '3px solid #D4AF37'}}>
-          <div style={{display: 'flex', alignItems: 'center'}}>
-             <span style={{background: '#e50914', color: 'white', padding: '4px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold', marginRight: '12px'}}>LIVE</span>
-             <span id="now-title" style={{fontSize: '1.5rem', fontWeight: 'bold'}}>Loading Broadcast...</span>
+
+        <div style={{display: 'flex', gap: '30px', flexDirection: 'row'}}>
+          {/* MAIN PLAYER AREA */}
+          <div style={{flex: 2.5}}>
+            <div id="video-parent" style={{position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(212,175,55,0.4)'}}>
+              <video id="video" style={{width: '100%', height: '100%'}} autoPlay muted playsInline />
+            </div>
+            <div style={{marginTop: '25px', padding: '30px', background: '#111', borderRadius: '12px', borderTop: '4px solid #D4AF37'}}>
+              <h1 style={{fontSize: '2rem', margin: '0 0 15px 0'}}>{metadata.title}</h1>
+              <p style={{color: '#bbb', lineHeight: '1.6', fontSize: '1.1rem'}}>{metadata.synopsis}</p>
+            </div>
           </div>
-          <p id="now-synopsis" style={{color: '#aaa', marginTop: '10px'}}>Connecting to the Short Film Show engine...</p>
-          <a id="film-link" href="#" target="_blank" style={{display: 'inline-block', marginTop: '15px', color: '#D4AF37', textDecoration: 'none', border: '1px solid #D4AF37', padding: '8px 20px', borderRadius: '5px'}}>View Film Details</a>
+
+          {/* EPG / SIDEBAR */}
+          <div style={{flex: 1, background: '#111', padding: '25px', borderRadius: '12px', border: '1px solid #222', maxHeight: '700px', overflowY: 'auto'}}>
+            <h3 style={{color: '#D4AF37', borderBottom: '1px solid #333', paddingBottom: '15px', marginTop: 0, textTransform: 'uppercase', letterSpacing: '1px'}}>Coming Up</h3>
+            {schedule.length > 0 ? schedule.map((item, i) => (
+              <div key={i} style={{padding: '15px 0', borderBottom: '1px solid #222'}}>
+                <div style={{fontSize: '1rem', fontWeight: 'bold', color: '#eee'}}>{item.title}</div>
+                <div style={{fontSize: '0.8rem', color: '#D4AF37', marginTop: '5px'}}>{item.air_time || 'Next'}</div>
+              </div>
+            )) : <p style={{color: '#444'}}>Loading schedule...</p>}
+          </div>
         </div>
       </div>
     </div>
