@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import 'shaka-player/dist/controls.css';
 
-const ShakaEngine = ({ streamUrl }) => {
+const ShakaEngine = ({ streamUrl, onSuccess, onFailure }) => {
   const videoRef = useRef(null);
   const videoContainerRef = useRef(null);
 
@@ -12,19 +12,17 @@ const ShakaEngine = ({ streamUrl }) => {
     let player = new shaka.Player(videoRef.current);
     let ui = new shaka.ui.Overlay(player, videoContainerRef.current, videoRef.current);
 
-    ui.configure({
-      'controlPanelElements': ['play_pause', 'spacer', 'mute', 'volume', 'fullscreen']
-    });
-
-    const load = async () => {
+    const init = async () => {
       try {
         await player.load(streamUrl);
+        onSuccess(); // Tell the wrapper we are live!
       } catch (e) {
         console.error("Shaka error:", e.code);
+        onFailure(); // Tell the wrapper to swap to fallback
       }
     };
 
-    load();
+    init();
 
     return () => {
       if (player) player.destroy();
