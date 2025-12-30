@@ -20,27 +20,27 @@ export default function LivePlayer() {
       const ui = new shaka.ui.Overlay(player, videoParent, video);
       ui.configure(uiConfig);
       
-      try {
-        // 1. Load the verified Live Stream
-        const liveStream = "https://channel.stage.theshortfilmshow.com/channel/main/playlist.m3u8";
-        await player.load(liveStream);
+      const liveStream = "https://channel.stage.theshortfilmshow.com/channel/main/playlist.m3u8";
+      const fallbackStream = "https://the-short-film-channel-assets-public.s3.amazonaws.com/Fall+back+video/Ambience+-2.mp4";
 
-        // 2. Fetch the EPG
+      try {
+        // Try live stream first
+        await player.load(liveStream);
+      } catch (e) {
+        console.log("Live stream not ready, switching to fallback.");
+        await player.load(fallbackStream);
+      }
+
+      try {
+        // Fetch EPG and fix thumbnails
         const epgRes = await fetch('https://the-short-film-channel-assets-public.s3.eu-north-1.amazonaws.com/epg/main.json');
         const epgData = await epgRes.json();
-        
-        // 3. REWRITE THUMBNAIL LOGIC
-        // We ensure all thumbnails use your Bunny CDN Pull Zone
-        const updatedPlaylist = (epgData.playlist || []).map(item => {
-          let thumb = item.thumbnail;
-          if (thumb.includes('assets.theshortfilmshow.com')) {
-             thumb = thumb.replace('assets.theshortfilmshow.com', 'assets.cdn.theshortfilmshow.com');
-          }
-          return { ...item, thumbnail: thumb };
-        });
-        
+        const updatedPlaylist = (epgData.playlist || []).map(item => ({
+          ...item,
+          thumbnail: item.thumbnail.replace('assets.theshortfilmshow.com', 'assets.cdn.theshortfilmshow.com')
+        }));
         setSchedule(updatedPlaylist);
-      } catch (e) { console.error("Meeting Stream Error", e); }
+      } catch (e) { console.error("Schedule sync failed."); }
     }
     init();
   }, []);
@@ -50,7 +50,6 @@ export default function LivePlayer() {
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.11/dist/controls.css" />
       <div style={{maxWidth: '1400px', margin: '0 auto'}}>
         
-        {/* HEADER */}
         <div style={{marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
             <a href="https://theshortfilmshow.com" target="_blank" rel="noreferrer">
                 <img src="https://the-short-film-channel-assets-public.s3.amazonaws.com/public%20files/the-short-film-CHANNEL.png" 
@@ -60,7 +59,6 @@ export default function LivePlayer() {
         </div>
 
         <div style={{display: 'flex', gap: '50px'}}>
-          {/* PLAYER */}
           <div style={{flex: 3}}>
             <div id="video-parent" style={{position: 'relative', aspectRatio: '16/9', background: '#000', borderRadius: '20px', overflow: 'hidden', border: '2px solid rgba(247, 174, 18, 0.4)'}}>
               <video id="video" style={{width: '100%', height: '100%'}} autoPlay muted playsInline loop />
@@ -71,17 +69,12 @@ export default function LivePlayer() {
             </div>
           </div>
 
-          {/* SCHEDULE */}
           <div style={{flex: 1.2, background: '#111', padding: '30px', borderRadius: '20px', border: '1px solid #222', maxHeight: '850px', overflowY: 'auto'}}>
             <h3 style={{color: '#F7AE12', borderBottom: '2px solid #333', paddingBottom: '20px', marginTop: 0, textTransform: 'uppercase'}}>Coming Up</h3>
             {schedule.length > 0 ? schedule.slice(0, 10).map((item, i) => (
               <div key={i} style={{display: 'flex', gap: '15px', padding: '20px 0', borderBottom: '1px solid #222'}}>
-                <img 
-                  src={item.thumbnail} 
-                  alt="" 
-                  style={{width: '100px', height: '56px', objectFit: 'cover', borderRadius: '6px', background: '#222'}} 
-                  onError={(e) => { e.target.src = 'https://the-short-film-channel-assets-public.s3.amazonaws.com/public%20files/the-short-film-CHANNEL.png'; }}
-                />
+                <img src={item.thumbnail} alt="" style={{width: '100px', height: '56px', objectFit: 'cover', borderRadius: '6px', background: '#222'}} 
+                     onError={(e) => { e.target.src = 'https://the-short-film-channel-assets-public.s3.amazonaws.com/public%20files/the-short-film-CHANNEL.png'; }} />
                 <div>
                   <div style={{fontSize: '1rem', fontWeight: 'bold', color: '#fff'}}>{item.title}</div>
                   <div style={{fontSize: '0.85rem', color: '#F7AE12', marginTop: '6px'}}>
