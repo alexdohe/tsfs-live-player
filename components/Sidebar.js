@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 const Sidebar = () => {
   const [programs, setPrograms] = useState([]);
   const [currentShow, setCurrentShow] = useState(null);
-  const [synopsis, setSynopsis] = useState("Loading broadcast details...");
+  const [synopsis, setSynopsis] = useState("Official broadcast showcase.");
 
   useEffect(() => {
     const fetchEPG = async () => {
@@ -12,34 +12,41 @@ const Sidebar = () => {
         const data = await res.json();
         const now = new Date();
         
-        // Filter out past shows
-        const upcoming = data.programs.filter(pgm => new Date(pgm.end) > now);
-        
-        // Find the "True" current or next real film (skipping Untitled/Promo blocks)
-        const currentOrNextFilm = upcoming.find(pgm => 
-          pgm.title && 
-          pgm.title.toLowerCase() !== 'untitled' && 
-          !pgm.title.toLowerCase().includes('5 minute ad')
-        );
+        // Filter out ads, untitled slots, and bumpers
+        const cleanPrograms = data.programs.filter(pgm => {
+          const t = pgm.title ? pgm.title.toLowerCase() : '';
+          return t && 
+                 t !== 'untitled' && 
+                 !t.includes('ad') && 
+                 !t.includes('bumper') && 
+                 !t.includes('break');
+        });
 
-        if (currentOrNextFilm) {
-          setCurrentShow(currentOrNextFilm);
-          fetchSynopsis(currentOrNextFilm.title);
+        const upcoming = cleanPrograms.filter(pgm => new Date(pgm.end) > now);
+        
+        if (upcoming.length > 0) {
+          setCurrentShow(upcoming[0]);
+          fetchSynopsis(upcoming[0].title);
+        } else {
+          setCurrentShow({ title: "The Short Film Show" });
+          setSynopsis("Supporting filmmakers worldwide.");
         }
 
-        setPrograms(upcoming.filter(p => p.title && p.title.toLowerCase() !== 'untitled').slice(0, 5));
+        setPrograms(upcoming.slice(0, 5));
       } catch (e) {
         console.error("EPG Fetch Error", e);
+        setCurrentShow({ title: "The Short Film Show" });
       }
     };
 
     const fetchSynopsis = async (title) => {
+      if (!title || title === "The Short Film Show") return;
       try {
         const res = await fetch(`/api/get-synopsis?title=${encodeURIComponent(title)}`);
         const data = await res.json();
-        setSynopsis(data.synopsis);
+        setSynopsis(data.synopsis || "Official broadcast showcase.");
       } catch (e) {
-        setSynopsis("Independent Cinema Showcase.");
+        setSynopsis("Official broadcast showcase.");
       }
     };
 
@@ -49,22 +56,24 @@ const Sidebar = () => {
   }, []);
 
   return (
-    <div style={{ flex: 1, minWidth: '300px', background: '#111', padding: '20px', borderRadius: '12px', border: '1px solid #222' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-        <div style={{ width: '8px', height: '8px', background: '#ff4b4b', borderRadius: '50%' }}></div>
-        <h3 style={{ color: '#D4AF37', margin: 0, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Featured Next</h3>
+    <div style={{ flex: 1, minWidth: '300px', background: '#0a0a0a', padding: '25px', borderRadius: '12px', border: '1px solid #1a1a1a', fontFamily: "'Trust', serif" }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
+        <div style={{ width: '8px', height: '8px', background: '#ff4b4b', borderRadius: '50%', boxShadow: '0 0 8px #ff4b4b' }}></div>
+        <h3 style={{ color: '#D4AF37', margin: 0, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold' }}>Featured next</h3>
       </div>
       
-      <h2 style={{ fontSize: '1.4rem', margin: '0 0 10px 0', color: '#fff' }}>{currentShow?.title || "TSFS Showcase"}</h2>
-      <p style={{ color: '#aaa', lineHeight: '1.5', fontSize: '0.85rem', minHeight: '60px' }}>{synopsis}</p>
+      <h2 style={{ fontSize: '1.6rem', margin: '0 0 15px 0', color: '#fff', fontWeight: 'normal', lineHeight: '1.2' }}>
+        {currentShow?.title || "The Short Film Show"}
+      </h2>
+      <p style={{ color: '#888', lineHeight: '1.6', fontSize: '0.9rem', minHeight: '80px', fontWeight: '300' }}>{synopsis}</p>
       
-      <div style={{ margin: '20px 0', borderTop: '1px solid #222' }}></div>
+      <div style={{ margin: '25px 0', borderTop: '1px solid #222' }}></div>
       
-      <h3 style={{ color: '#555', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '15px' }}>Coming Up</h3>
+      <h3 style={{ color: '#444', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '20px', letterSpacing: '2px', fontWeight: 'bold' }}>Coming up</h3>
       {programs.slice(1, 5).map((pgm, i) => (
-        <div key={i} style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #1a1a1a' }}>
-          <div style={{ fontWeight: '600', fontSize: '0.85rem', color: '#eee' }}>{pgm.title}</div>
-          <div style={{ fontSize: '0.7rem', color: '#D4AF37', marginTop: '2px' }}>
+        <div key={i} style={{ marginBottom: '15px', paddingBottom: '12px', borderBottom: '1px solid #111' }}>
+          <div style={{ fontWeight: 'normal', fontSize: '0.9rem', color: '#eee' }}>{pgm.title}</div>
+          <div style={{ fontSize: '0.75rem', color: '#D4AF37', marginTop: '4px', letterSpacing: '0.5px' }}>
             {new Date(pgm.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
