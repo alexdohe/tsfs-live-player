@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 const Sidebar = () => {
   const [programs, setPrograms] = useState([]);
   const [currentShow, setCurrentShow] = useState(null);
-  const [synopsis, setSynopsis] = useState("Loading broadcast details...");
+  const [synopsis, setSynopsis] = useState("Official broadcast showcase.");
   const [banner, setBanner] = useState(null);
 
   useEffect(() => {
@@ -21,12 +21,13 @@ const Sidebar = () => {
         const upcoming = cleanPrograms.filter(pgm => new Date(pgm.end) > now);
         
         if (upcoming.length > 0) {
-          setCurrentShow(upcoming[0]);
-          fetchDetails(upcoming[0].title);
+          const activeFilm = upcoming[0];
+          setCurrentShow(activeFilm);
+          // Set thumbnail from EPG immediately as fallback
+          setBanner(activeFilm.thumbnail || null);
+          fetchDetails(activeFilm.title);
         } else {
           setCurrentShow({ title: "The Short Film Show" });
-          setSynopsis("Supporting filmmakers worldwide.");
-          setBanner(null);
         }
         setPrograms(upcoming.slice(0, 5));
       } catch (e) {
@@ -37,12 +38,13 @@ const Sidebar = () => {
     const fetchDetails = async (title) => {
       try {
         const res = await fetch(`/api/get-synopsis?title=${encodeURIComponent(title)}`);
+        if (!res.ok) throw new Error("API Error");
         const data = await res.json();
-        setSynopsis(data.synopsis);
-        setBanner(data.banner);
+        // Update with high-res banner if found in Mongo, otherwise keep EPG thumb
+        if (data.synopsis) setSynopsis(data.synopsis);
+        if (data.banner) setBanner(data.banner);
       } catch (e) {
-        setSynopsis("Official broadcast showcase.");
-        setBanner(null);
+        console.error("Mongo Fetch Failed", e);
       }
     };
 
