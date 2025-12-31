@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 const Sidebar = () => {
   const [programs, setPrograms] = useState([]);
   const [currentShow, setCurrentShow] = useState(null);
-  const [synopsis, setSynopsis] = useState("Official broadcast showcase.");
+  const [synopsis, setSynopsis] = useState("Loading broadcast details...");
 
   useEffect(() => {
     const fetchEPG = async () => {
@@ -12,14 +12,10 @@ const Sidebar = () => {
         const data = await res.json();
         const now = new Date();
         
-        // Filter out ads, untitled slots, and bumpers
+        // Filter out ads and technical placeholders
         const cleanPrograms = data.programs.filter(pgm => {
           const t = pgm.title ? pgm.title.toLowerCase() : '';
-          return t && 
-                 t !== 'untitled' && 
-                 !t.includes('ad') && 
-                 !t.includes('bumper') && 
-                 !t.includes('break');
+          return t && t !== 'untitled' && !t.includes('ad') && !t.includes('bumper');
         });
 
         const upcoming = cleanPrograms.filter(pgm => new Date(pgm.end) > now);
@@ -34,7 +30,6 @@ const Sidebar = () => {
 
         setPrograms(upcoming.slice(0, 5));
       } catch (e) {
-        console.error("EPG Fetch Error", e);
         setCurrentShow({ title: "The Short Film Show" });
       }
     };
@@ -42,6 +37,7 @@ const Sidebar = () => {
     const fetchSynopsis = async (title) => {
       if (!title || title === "The Short Film Show") return;
       try {
+        // This hits your Next.js API route which connects to MongoDB
         const res = await fetch(`/api/get-synopsis?title=${encodeURIComponent(title)}`);
         const data = await res.json();
         setSynopsis(data.synopsis || "Official broadcast showcase.");
@@ -59,7 +55,7 @@ const Sidebar = () => {
     <div style={{ flex: 1, minWidth: '300px', background: '#0a0a0a', padding: '25px', borderRadius: '12px', border: '1px solid #1a1a1a', fontFamily: "'Trust', serif" }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
         <div style={{ width: '8px', height: '8px', background: '#ff4b4b', borderRadius: '50%', boxShadow: '0 0 8px #ff4b4b' }}></div>
-        <h3 style={{ color: '#D4AF37', margin: 0, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold' }}>Featured next</h3>
+        <h3 style={{ color: '#D4AF37', margin: 0, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold' }}>Now Playing</h3>
       </div>
       
       <h2 style={{ fontSize: '1.6rem', margin: '0 0 15px 0', color: '#fff', fontWeight: 'normal', lineHeight: '1.2' }}>

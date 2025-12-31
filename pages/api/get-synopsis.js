@@ -1,33 +1,26 @@
 import { MongoClient } from 'mongodb';
 
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri);
+
 export default async function handler(req, res) {
   const { title } = req.query;
-  if (!title) return res.status(200).json({ synopsis: "TSFS Live Broadcast" });
-
-  const client = new MongoClient(process.env.MONGODB_URI, {
-    connectTimeoutMS: 5000, // Don't let it hang the page
-  });
 
   try {
     await client.connect();
-    // Use the exact database name from your Atlas Screenshot
-    const database = client.db('video-streaming-app'); 
-    const uploads = database.collection('uploads');
+    const database = client.db('tsfs_production'); // Match your DB name
+    const films = database.collection('films');
+    
+    // We look for a film where the title matches the EPG title
+    const film = await await films.findOne({ title: { $regex: new RegExp(title, "i") } });
 
-    const film = await uploads.findOne({ 
-      "project.title": { $regex: new RegExp(title.trim(), "i") } 
-    });
-
-    if (film) {
-      res.status(200).json({ 
-        synopsis: film.project?.synopsis || "No synopsis available.",
-        thumbnail: film.thumbnail?.url || null
-      });
-    } else {
-      res.status(200).json({ synopsis: "Independent Short Film Showcase." });
+    if (film && film.synopsis) {
+      return res.status(200).json({ synopsis: film.synopsis });
     }
-  } catch (error) {
-    res.status(200).json({ synopsis: "Live Short Film Channel." });
+    
+    res.status(200).json({ synopsis: "Official broadcast showcase." });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to fetch from MongoDB" });
   } finally {
     await client.close();
   }
