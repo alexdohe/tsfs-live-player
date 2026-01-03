@@ -5,15 +5,13 @@ const VideoPlayer = ({ streamUrl, fallbackUrl }) => {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const [isLive, setIsLive] = useState(false);
+  const [needsInteraction, setNeedsInteraction] = useState(true);
 
   const checkStreamHealth = async () => {
     try {
       const response = await fetch(streamUrl, { method: 'HEAD', cache: 'no-cache' });
-      if (response.ok) {
-        if (!isLive) setIsLive(true);
-      } else {
-        if (isLive) setIsLive(false);
-      }
+      if (response.ok && !isLive) setIsLive(true);
+      if (!response.ok && isLive) setIsLive(false);
     } catch (e) {
       if (isLive) setIsLive(false);
     }
@@ -27,43 +25,33 @@ const VideoPlayer = ({ streamUrl, fallbackUrl }) => {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || needsInteraction) return;
 
     if (isLive) {
       if (Hls.isSupported()) {
         if (hlsRef.current) hlsRef.current.destroy();
-        
-        const hls = new Hls({
-          manifestLoadingMaxRetry: Infinity,
-          manifestLoadingRetryDelay: 1000,
-          liveDurationInfinity: true,
-          enableWorker: true
-        });
-        
+        const hls = new Hls({ manifestLoadingMaxRetry: Infinity, liveSyncDurationCount: 3 });
         hls.loadSource(streamUrl);
         hls.attachMedia(video);
         hlsRef.current = hls;
-        
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => {
-            // If autoplay fails unmuted, we play muted to ensure it starts
-            video.muted = true;
-            video.play();
-          });
+          video.muted = false;
+          video.volume = 1.0;
+          video.play();
         });
       }
     } else {
-      // Fallback Mode
-      if (hlsRef.current) hlsRef.current.destroy();
       video.src = fallbackUrl;
       video.loop = true;
-      video.play().catch(() => {});
+      video.muted = false;
+      video.volume = 1.0;
+      video.play();
     }
+  }, [isLive, needsInteraction, streamUrl, fallbackUrl]);
 
-    return () => {
-      if (hlsRef.current) hlsRef.current.destroy();
-    };
-  }, [isLive, streamUrl, fallbackUrl]);
+  const handleStart = () => {
+    setNeedsInteraction(false);
+  };
 
   return (
     <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1a1a1a' }}>
@@ -74,12 +62,17 @@ const VideoPlayer = ({ streamUrl, fallbackUrl }) => {
         playsInline
       />
       
-      <div style={{ position: 'absolute', top: '20px', left: '20px', display: 'flex', alignItems: 'center', gap: '8px', pointerEvents: 'none' }}>
-        <div style={{ width: '10px', height: '10px', background: isLive ? '#ff4b4b' : '#555', borderRadius: '50%', boxShadow: isLive ? '0 0 10px #ff4b4b' : 'none' }}></div>
-        <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: isLive ? '#fff' : '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          {isLive ? 'Live Feed' : 'Showcase Mode'}
-        </span>
-      </div>
+      {needsInteraction && (
+        <div 
+          onClick={handleStart}
+          style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 20 }}
+        >
+          <img src="https://theshortfilmshow.com/Logo.png" alt="Logo" style={{ height: '60px', marginBottom: '20px' }} />
+          <button style={{ background: '#D4AF37', color: '#000', border: 'none', padding: '15px 40px', borderRadius: '4px', fontWeight: 'bold', letterSpacing: '2px', cursor: 'pointer' }}>
+            ENTER CINEMA
+          </button>
+        </div>
+      )}
     </div>
   );
 };
