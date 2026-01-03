@@ -8,19 +8,19 @@ const VideoPlayer = ({ streamUrl, fallbackUrl }) => {
 
   const checkStreamHealth = async () => {
     try {
-      // Use a timestamp to bypass browser cache
-      const cacheBuster = streamUrl.includes('?') ? `&t=${Date.now()}` : `?t=${Date.now()}`;
-      const response = await fetch(streamUrl + cacheBuster, { method: 'HEAD', cache: 'no-store' });
-      
-      if (response.ok && !isLive) setIsLive(true);
-      if (!response.ok && isLive) setIsLive(false);
+      const response = await fetch(streamUrl, { method: 'HEAD', cache: 'no-cache' });
+      if (response.ok) {
+        if (!isLive) setIsLive(true);
+      } else {
+        if (isLive) setIsLive(false);
+      }
     } catch (e) {
       if (isLive) setIsLive(false);
     }
   };
 
   useEffect(() => {
-    const heartbeat = setInterval(checkStreamHealth, 8000); // Check every 8 seconds
+    const heartbeat = setInterval(checkStreamHealth, 10000);
     checkStreamHealth();
     return () => clearInterval(heartbeat);
   }, [isLive]);
@@ -34,15 +34,10 @@ const VideoPlayer = ({ streamUrl, fallbackUrl }) => {
         if (hlsRef.current) hlsRef.current.destroy();
         
         const hls = new Hls({
-          // Force player to stay at the very edge of the live stream
-          liveSyncDurationCount: 2, 
           manifestLoadingMaxRetry: Infinity,
-          manifestLoadingRetryDelay: 500,
-          enableWorker: true,
-          // Prevent manifest caching
-          xhrSetup: (xhr) => {
-            xhr.open('GET', xhr.responseURL.includes('?') ? xhr.responseURL + `&t=${Date.now()}` : xhr.responseURL + `?t=${Date.now()}`, true);
-          }
+          manifestLoadingRetryDelay: 1000,
+          liveDurationInfinity: true,
+          enableWorker: true
         });
         
         hls.loadSource(streamUrl);
@@ -50,23 +45,19 @@ const VideoPlayer = ({ streamUrl, fallbackUrl }) => {
         hlsRef.current = hls;
         
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          // Attempt unmuted play (Browser may still require one initial click on the page)
-          video.muted = false;
           video.play().catch(() => {
-            console.log("Autoplay requires a user click to start unmuted.");
-            video.muted = true; // Fallback to muted autoplay if blocked
+            // If autoplay fails unmuted, we play muted to ensure it starts
+            video.muted = true;
             video.play();
           });
         });
       }
     } else {
+      // Fallback Mode
+      if (hlsRef.current) hlsRef.current.destroy();
       video.src = fallbackUrl;
       video.loop = true;
-      video.muted = false;
-      video.play().catch(() => {
-        video.muted = true;
-        video.play();
-      });
+      video.play().catch(() => {});
     }
 
     return () => {
@@ -85,7 +76,7 @@ const VideoPlayer = ({ streamUrl, fallbackUrl }) => {
       
       <div style={{ position: 'absolute', top: '20px', left: '20px', display: 'flex', alignItems: 'center', gap: '8px', pointerEvents: 'none' }}>
         <div style={{ width: '10px', height: '10px', background: isLive ? '#ff4b4b' : '#555', borderRadius: '50%', boxShadow: isLive ? '0 0 10px #ff4b4b' : 'none' }}></div>
-        <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: isLive ? '#fff' : '#888', textTransform: 'uppercase', letterSpacing: '1px', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: isLive ? '#fff' : '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>
           {isLive ? 'Live Feed' : 'Showcase Mode'}
         </span>
       </div>
