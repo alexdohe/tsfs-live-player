@@ -23,8 +23,9 @@ const Sidebar = () => {
         if (upcoming.length > 0) {
           const activeFilm = upcoming[0];
           setCurrentShow(activeFilm);
-          // Set thumbnail from EPG immediately as fallback
+          // 1. IMAGE: Always and only from EPG JSON (The Poster)
           setBanner(activeFilm.thumbnail || null);
+          // 2. TEXT: Trigger the DB fetch for the synopsis
           fetchDetails(activeFilm.title);
         } else {
           setCurrentShow({ title: "The Short Film Show" });
@@ -40,9 +41,9 @@ const Sidebar = () => {
         const res = await fetch(`/api/get-synopsis?title=${encodeURIComponent(title)}`);
         if (!res.ok) throw new Error("API Error");
         const data = await res.json();
-        // Update with high-res banner if found in Mongo, otherwise keep EPG thumb
+        // 3. SYNOPSIS: Always from MongoDB (The Story)
         if (data.synopsis) setSynopsis(data.synopsis);
-        if (data.banner) setBanner(data.banner);
+        // We NO LONGER call setBanner here, preserving the EPG poster.
       } catch (e) {
         console.error("Mongo Fetch Failed", e);
       }
@@ -61,7 +62,7 @@ const Sidebar = () => {
       </div>
 
       {banner && (
-        <img src={banner} alt="Film Artwork" style={{ width: '100%', borderRadius: '8px', marginBottom: '15px', border: '1px solid #333' }} />
+        <img src={banner} alt="Film Poster" style={{ width: '100%', borderRadius: '8px', marginBottom: '15px', border: '1px solid #333' }} />
       )}
       
       <h2 style={{ fontSize: '1.6rem', margin: '0 0 10px 0', color: '#fff', fontWeight: 'normal' }}>
