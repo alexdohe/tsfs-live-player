@@ -1,59 +1,75 @@
-import React, { useState, useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
-
-const ShakaEngine = dynamic(() => import('./ShakaEngine'), { ssr: false });
+import React, { useEffect, useRef, useState } from 'react';
+import Hls from 'hls.js';
 
 const VideoPlayer = ({ streamUrl, fallbackUrl }) => {
-  const [showFallback, setShowFallback] = useState(false);
-  const [loading, setLoading] = useState(true);
   const videoRef = useRef(null);
+  const [isLive, setIsLive] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (loading) {
-        setShowFallback(true);
-        setLoading(false);
+  const checkStreamHealth = async () => {
+    try {
+      const response = await fetch(streamUrl, { method: 'HEAD' });
+      if (response.ok) {
+        if (!isLive) setIsLive(true);
+        setHasError(false);
+      } else {
+        setIsLive(false);
       }
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [loading]);
-
-  // Handle AirPlay-friendly looping
-  const handleEnded = () => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play();
+    } catch (e) {
+      setIsLive(false);
     }
   };
 
-  if (showFallback) {
-    return (
-      <div style={{ width: '100%', position: 'relative', background: '#000', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden' }}>
-        <video 
-          ref={videoRef}
-          src={fallbackUrl} 
-          controls 
-          autoPlay 
-          muted 
-          playsInline 
-          onEnded={handleEnded}
-          style={{ width: '100%', height: '100%' }} 
-          x-webkit-airplay="allow"
-        />
-      </div>
-    );
-  }
+  useEffect(() => {
+    // 15-second heartbeat to check if live feed is back
+    const heartbeat = setInterval(checkStreamHealth, 15000);
+    checkStreamHealth();
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Set Volume to 100% by default
+    video.volume = 1.0;
+
+    let hls;
+    if (isLive) {
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          manifestLoadingRetryDelay: 3000,
+          manifestLoadingMaxRetry: Infinity // Keep retrying forever
+        });
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => console.log("Autoplay blocked")));
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = streamUrl;
+        video.addEventListener('loadedmetadata', () => video.play());
+      }
+    } else {
+      // Fallback mode: stays in same video element to prevent Fullscreen exit
+      video.src = fallbackUrl;
+      video.loop = true;
+      video.play().catch(e => console.log("Autoplay blocked"));
+    }
+
+    return () => {
+      clearInterval(heartbeat);
+      if (hls) hls.destroy();
+    };
+  }, [isLive, streamUrl, fallbackUrl]);
 
   return (
-    <div style={{ position: 'relative' }}>
-      <ShakaEngine 
-        streamUrl={streamUrl} 
-        onSuccess={() => setLoading(false)} 
-        onFailure={() => setShowFallback(true)} 
+    <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1a1a1a' }}>
+      <video
+        ref={videoRef}
+        style={{ width: '100%', height: '100%', display: 'block' }}
+        controls
+        playsInline
+        muted // Necessary for reliable autoplay
       />
-      {loading && (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px' }}>
-          <span style={{ color: '#D4AF37', fontSize: '0.8rem', fontWeight: 'bold' }}>ESTABLISHING SIGNAL...</span>
+      {!isLive && (
+        <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', padding: '5px 10px', borderRadius: '4px', fontSize: '0.7rem', color: '#D4AF37' }}>
+          OFF-AIR: SHOWCASE MODE
         </div>
       )}
     </div>
